@@ -1,26 +1,20 @@
-from aiogram import Bot,Dispatcher,executor
-from aiogram.dispatcher.filters.state import StatesGroup, State
-from aiogram.types import Message, KeyboardButton,\
-    InlineKeyboardMarkup,InlineKeyboardButton,ReplyKeyboardRemove
-import sqlite3 as sq
-import sozder
+from aiogram.types import Message,InlineKeyboardMarkup,InlineKeyboardButton,CallbackQuery
+import sozder,random,requests
 from config import TOKEN
 from sozder import rand_soz,HELP_COMMAND,EREJE_COMMAND
-from aiogram.types import CallbackQuery
-from database import *
-from aiogram import  types, executor, Bot, Dispatcher
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram import  executor, Bot, Dispatcher
+from database import BotDB
 """Main"""
-storage = MemoryStorage()
 bot = Bot(token=TOKEN)
-dp = Dispatcher(bot=bot,storage=storage)
+dp = Dispatcher(bot=bot)
+"""DATABASE"""
+BotDB = BotDB("DATABASE")
 """Peremenny"""
 soz = rand_soz
 username = ''
 game_start = False
-"""STATE"""
-class ProfileStatesGroup(StatesGroup):
-    firstname,raiting,tap_soz,tus_soz = State(),State(),State(),State()
+raiting = 1
+point = 1
 """INLINE"""
 def get_ikb()->InlineKeyboardMarkup:
     ikb = InlineKeyboardMarkup(inline_keyboard = [
@@ -35,6 +29,8 @@ ikb_soz = InlineKeyboardMarkup(inline_keyboard=[
 """START"""
 @dp.message_handler(commands=['bastau','start'])
 async def start_command(message:Message):
+    if(not  BotDB.user_exists(message.from_user.id)):
+        BotDB.add_user(message.from_user.id,message.from_user.first_name)
     await bot.send_message(chat_id=message.from_user.id,text = "Sälem!👋 Men Söz-Jūmbaq oiynyn jürgızetın bolamyn🤓.",reply_markup=get_ikb())
 """HELP"""
 @dp.message_handler(commands=['komek','help','помощь'])
@@ -50,6 +46,8 @@ async def ereje_command(message:Message):
 @dp.message_handler(commands = ['oinau','play','играть'])
 async def oynau_command(message:Message):
     global game_start,username
+    if (not BotDB.user_exists(message.from_user.id)):
+        BotDB.add_user(message.from_user.id, message.from_user.first_name)
     if game_start == False:
         await bot.send_message(chat_id=message.chat.id,text = f"{message.from_user.first_name} soz jasurady",reply_markup=ikb_soz)
         username = message.from_user.first_name
@@ -69,8 +67,11 @@ async def cancel_command(message:Message):
 """MESSAGE """
 @dp.message_handler()
 async def soz_command(message : Message):
+    if (not BotDB.user_exists(message.from_user.id)):
+        BotDB.add_user(message.from_user.id, message.from_user.first_name)
     global username,soz
-    if message.text == soz and message.from_user.first_name != username:
+    if message.text == soz:
+        soz = sozder.clear_sozdik[sozder.rand_soz_int-2]
         await bot.send_message(chat_id=message.chat.id,text = f"{message.from_user.first_name} soz tapbyldi👍\nKelesi soz🫡",reply_markup=ikb_soz)
         username = message.from_user.first_name
 """CALLBACK"""
@@ -81,8 +82,13 @@ async def koru(callback:CallbackQuery):
         await callback.answer(show_alert=True,text=f"Jasyrin Soz🤫: {soz}")
     elif callback.from_user.first_name == username:
         await callback.answer(text = "soz ozgerdi")
+        rand_int = random.randint(0, 6)
 
-        soz = sozder.clear_sozdik[sozder.random.randint(1, sozder.rand_soz_int - 1)]
+        r = requests.get(sozder.URL[rand_int])
+        s = sozder.bs(r.text, "html.parser")
+        sozdik = s.find_all('div', class_="row_word")
+        clear_sozdik = [c.text for c in sozdik]
+        soz = clear_sozdik[sozder.random.randint(1, sozder.rand_soz_int - 1)]
 """"""
 if __name__ == "__main__":
     executor.start_polling(dp,skip_updates=True)

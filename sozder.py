@@ -45,8 +45,5 @@ tapqan adam jasyrady
 HELP_COMMAND = """
 /komek - bottyñ funksiasyn sūrau
 /ereje - oiynnyñ qalai oinalatynyn sūrau
-/rating - oinshylar ūpaiy
-/rating joiu - chattagy rating joiu
-/menin statisticam - ozinnin statisticandy bil
 """
 
